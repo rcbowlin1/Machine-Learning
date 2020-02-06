@@ -1,0 +1,141 @@
+# Data Imports
+import numpy as np
+import pandas as pd
+from pandas import Series, DataFrame
+
+# Math
+import math
+
+# Plot Imports
+import matplotlib.pyplot as plt
+import seaborn as sns
+sns.set_style('whitegrid')
+%matplotlib inline
+
+# Machine Learning Imports
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+
+# For evaluating our ML results
+from sklearn import metrics
+
+# Dataset Import
+import statsmodels.api as sm
+
+# Logistic Function
+def logistic(t):
+    return 1.0 / (1+math.exp((-1.0)*t))
+
+# Set t from -6 to 6 ( 500 elements, linearly spaced)
+t = np.linspace(-6,6,500)
+
+# Set up y values (using list comprehension)
+y = np.array([logistic(ele) for ele in t])
+
+# Plot
+plt.plot(t,y)
+plt.title(' Logistic Function')
+
+# Standard method of loading Statsmodels datasets into a pandas DataFrame.
+# Note the name fair stands for 'affair' dataset.
+
+df = sm.datasets.fair.load_pandas().data
+
+# Function to determine if there was an affair
+
+def affair_check(x):
+    if x != 0:
+        return 1
+    else:
+        return 0
+
+
+# Add in new column with affair_check function
+
+df['Had_Affair'] = df['affairs'].apply(affair_check)
+
+# Catplot on age
+
+sns.catplot('age',data = df, kind = 'count', hue = 'Had_Affair', palette = 'coolwarm')
+
+# Catplot on Years Married
+
+sns.catplot('yrs_married', data = df, kind = 'count',hue = 'Had_Affair',palette = 'coolwarm')
+
+# Catplot on Children
+
+sns.catplot('children', data = df, kind = 'count',hue = 'Had_Affair',palette = 'coolwarm')
+
+# Catplot on Education
+
+sns.catplot('educ', data = df, kind = 'count', hue = 'Had_Affair', palette = 'coolwarm')
+
+# Create a new DataFrame for the Categorical Variables
+
+occ_dummies = pd.get_dummies(df['occupation'])
+hus_occ_dummies = pd.get_dummies(df['occupation_husb'])
+
+# View the data
+occ_dummies.head()
+
+# Create column names for the new DataFrames
+
+occ_dummies.columns = ['occ1','occ2','occ3','occ4','occ5','occ6']
+hus_occ_dummies.columns = ['hocc1','hocc2','hocc3','hocc4','hocc5','hocc6']
+
+# Create x and y datasets
+
+X = df.drop(['occupation','occupation_husb','Had_Affair'],axis=1)
+
+dummies = pd.concat([occ_dummies,hus_occ_dummies], axis = 1)
+
+X = pd.concat([X,dummies],axis = 1)
+
+Y = df.Had_Affair
+
+Y.head()
+
+X = X.drop('occ1',axis=1)
+X = X.drop('hocc1',axis=1)
+
+# Drop affairs column so Y target makes sense
+X = X.drop('affairs',axis=1)
+
+# Preview
+X.head()
+
+### Turn into a 1-D Array
+
+Y = np.ravel(Y)
+
+Y
+
+# Create Logistic Model
+log_model = LogisticRegression()
+
+# Fit the model
+log_model.fit(X,Y)
+
+# Check Accuracy
+log_model.score(X,Y)
+Y.mean()
+
+# Use zip to bring the column names and the np.transpose function to bring together the coefficients from the model
+coeff_df = DataFrame(zip(X.columns, np.transpose(log_model.coef_)))
+
+# Split the datasets into Testing and Training
+
+X_train,X_test,Y_train,Y_test = train_test_split(X,Y)
+
+# Create another Logistic Regression model
+log_model2 = LogisticRegression()
+
+# Fit model using training datasets
+log_model2.fit(X_train,Y_train)
+
+class_predict = log_model2.predict(X_test)
+
+print(metrics.accuracy_score(Y_test,class_predict))
+
+
+
